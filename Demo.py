@@ -1,3 +1,4 @@
 from calculator.calc import add
-result = add()
-print(result)
+import os
+import pandas as pd
+print(pd.__version__)
