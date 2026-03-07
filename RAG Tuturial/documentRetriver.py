@@ -1,32 +1,51 @@
 from pathlib import Path
+import pdfplumber
+from docx import Document
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 def file_content():
-    document = []
+    print(f"Document Retrievel start time: {datetime.now()}")
+    all_files = []
     folder_path = Path(
         r"C:\Users\nithi\Desktop\My Projects\Learning\PythonLearning1\RAG Tuturial\HR_Policy_Documents"
     )
     for file in folder_path.iterdir():
         if file.is_file():
-            print(file.name, file.suffix)
-            try:
-                if file.suffix == ".txt":
-                    with open(file, 'r') as f:
-                        doc_text = f.read()
-                document.append(
-                    {
-                        "text": doc_text,
-                        "Source": file.name,
-                        "Type": file.suffix
-                    }
-                )
-            except Exception as e:
-                print(f"{file.name} skipped {e}")
-    return document
+            all_files.append(file)
+    with ThreadPoolExecutor() as executor:
+        result  = list(executor.map(get_doc_content,all_files))
+    print(f"Document Retrievel end time: {datetime.now()}")
+    return result
+def get_doc_content(file):
+    try:
+        doc_text = ""
+        if file.suffix == ".txt":
+            with open(file, 'r') as f:
+                doc_text = f.read()
+        elif file.suffix == ".pdf":
+            doc_text=""
+            with pdfplumber.open(file) as f:
+                for page in f.pages:
+                    doc_text += (page.extract_text() or "")+"\n"
+        elif file.suffix ==".docx":
+            doc_text=""
+            doc = Document(file)
+            for p in doc.paragraphs:
+                if p.text.strip():
+                    doc_text+=p.text + "\n"
+        
+    except Exception as e:
+        print(f"{file.name} skipped {e}")
 
-file_content()
+    print(f"file executed: {file.name}")
+    return{
+            "text": doc_text,
+            "Source": file.name,
+            "Type": file.suffix
+        }
 
-
-
-
+if __name__ == "__main__":
+    file_content()
 
 
 

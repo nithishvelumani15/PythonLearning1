@@ -5,21 +5,31 @@ from dotenv import load_dotenv
 import chromadb
 from sentence_transformers import SentenceTransformer
 from documentRetriver import file_content
+from document_chunking import chunk_text
+from datetime import datetime
+
 load_dotenv()
 
-client = chromadb.Client()
+print(f"Starting the Process.......{datetime.now()}")
+client = chromadb.PersistentClient(path="./RAG Tuturial/chroma_db")
 embed_model = SentenceTransformer('BAAI/bge-small-en-v1.5')
 #embed_model = SentenceTransformer('all-MiniLM-L6-v2')
-collection = client.create_collection("policies")
+collection = client.get_or_create_collection("policies")
 policies = file_content()
-policy_embeddings = embed_model.encode(policies).tolist()
-
-collection.add(
-    documents=policies,
-    embeddings=policy_embeddings,
-    ids=[f"policy_{i}" for i in range(len(policies))]
-)
-    
+for pol in policies:
+    if not pol["text"].strip():
+        continue
+    print(f"Starting the chunking Process.......{datetime.now()}")
+    doc_text = chunk_text(pol["text"])
+    print(f"ending the chunking Process.......{datetime.now()}")
+    source_name = pol["Source"].replace(" ", "_").replace(".", "_")
+    policy_embeddings = embed_model.encode(doc_text).tolist()
+    ids = [f"policy_{source_name}_{i}" for i in range(len(doc_text))]
+    collection.add(
+        documents=doc_text,
+        embeddings=policy_embeddings,
+        ids=ids
+    )
 class HR_Assistant:
     def __init__(self,user_prompt, HR_Policies):
         self.user_prompt = user_prompt
@@ -45,13 +55,14 @@ class HR_Assistant:
                 )
             )
             print(f"Gemini: {response.text}")
-            
+            print(f"ending the Process.......{datetime.now()}")
         except Exception as e:
             print(f"An error occurred: {e}")
 
 user_query = input("Enter you question: ")
 query_vec = embed_model.encode([user_query]).tolist()
-result = collection.query(query_embeddings=query_vec,n_results=10)
+result = collection.query(query_embeddings=query_vec,n_results=5)
 
 prompt1 = HR_Assistant(user_query, result["documents"][0])
+
 prompt1.askAi()
