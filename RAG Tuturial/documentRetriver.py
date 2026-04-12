@@ -7,7 +7,7 @@ def file_content():
     print(f"Document Retrievel start time: {datetime.now()}")
     all_files = []
     folder_path = Path(
-        r"C:\Users\nithi\Desktop\My Projects\Learning\PythonLearning1\RAG Tuturial\HR_Policy_Documents"
+        r"C:\Users\nithi\Desktop\My Projects\Learning\PythonLearning1\RAG\HR_Policy_Documents"
     )
     for file in folder_path.iterdir():
         if file.is_file():
