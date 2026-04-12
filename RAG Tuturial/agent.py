@@ -5,10 +5,18 @@ from dotenv import load_dotenv
 import chromadb
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
-
+client = chromadb.PersistentClient(path="./RAG Tuturial/chroma_db")
+embed_model = SentenceTransformer('BAAI/bge-small-en-v1.5')
+#embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+collection = client.get_or_create_collection("policies")
+def embedUserQuery(user_query):
+    query_vec = embed_model.encode([user_query]).tolist()
+    result = collection.query(query_embeddings=query_vec,n_results=5)
+    
+    return result
 load_dotenv()
 
-print(f"Starting the Process.......{datetime.now()}")
+print(f"Starting the Session.......{datetime.now()}")
 
 class HR_Assistant:
     def __init__(self,user_prompt, HR_Policies):
@@ -19,10 +27,11 @@ class HR_Assistant:
     def askAi(self):
         try:
             context_text = "\n".join(self.HR_Policies)
-            full_prompt = f""" Assume yoursellf as an HR Assistant.
+            full_prompt = f""" Assume yourself as an HR Assistant.
             Answer strictly using the context below.
             If the answer is not available in the context, say:
             "Please reach out to your respective HR."
+            you should maintain conversation like a real HR ,let's say greeting and other human behaviours.
             Context: {context_text}
             Question:{self.user_prompt}
             """
@@ -41,12 +50,16 @@ class HR_Assistant:
 
 
 
-client = chromadb.PersistentClient(path="./RAG Tuturial/chroma_db")
-embed_model = SentenceTransformer('BAAI/bge-small-en-v1.5')
-#embed_model = SentenceTransformer('all-MiniLM-L6-v2')
-collection = client.get_or_create_collection("policies")
-user_query = input("Enter you question: ")
-query_vec = embed_model.encode([user_query]).tolist()
-result = collection.query(query_embeddings=query_vec,n_results=5)
-prompt1 = HR_Assistant(user_query, result["documents"][0])
-prompt1.askAi()
+
+while (True):
+    print("Enter your question below. If you want to stop enter 'quit' or 'exit' or click enter.")
+    user_query = input("Enter you question: ")
+    if(user_query.lower() in ['exit','quit'] or user_query == ""):
+        print("Stopping the session.")
+        break
+    result = embedUserQuery(user_query)
+    
+    prompt1 = HR_Assistant(user_query, result["documents"][0])
+    prompt1.askAi()
+
+
